@@ -5,7 +5,7 @@ from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 
 # --- SOZLAMALAR ---
-TOKEN = "8680476167:AAE0eo9nPoF6w0VUeYj0ipV3eSPAVxpG6T4" # Yangi token qo'yishni unutmang!
+TOKEN = "8524179314:AAG6qq-9DlczUHDRQkpyL2ZuV925wzyaMmw" # Yangi token qo'yishni unutmang!
 ADMIN_ID = 8422041084 
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
