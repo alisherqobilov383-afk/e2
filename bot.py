@@ -1,7 +1,7 @@
 import logging
 import threading
 from flask import Flask
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 
 # --- SOZLAMALAR ---
@@ -12,88 +12,80 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 # --- BOT FUNKSIYALARI ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Tugmalarni alohida-alohida qatorga qo'yamiz
+    # Foydalanuvchi ma'lumotlarini tozalaymiz (start bosilganda)
+    context.user_data['waiting_for_complaint'] = False
+    
     keyboard = [
         [KeyboardButton("📝 Murojaat yozish")],
         [KeyboardButton("📱 Kontaktni ulashish", request_contact=True)]
     ]
     await update.message.reply_text(
-        "Assalomu alaykum! Quyidagi tugmalardan birini tanlang:", 
+        "Assalomu alaykum! Murojaat qoldirish uchun tugmani bosing.",
         reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     )
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_all_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     text = update.message.text
 
-    # 1. Tugma bosilganda holatni o'zgartirish
+    # 1. Tugma bosilganda
     if text == "📝 Murojaat yozish":
-        await update.message.reply_text("Murojaatingizni yozing yoki fayl yuboring...")
         context.user_data['waiting_for_complaint'] = True
+        await update.message.reply_text("Murojaatingizni (matn, rasm yoki video) yuboring:")
         return
 
-    # 2. Agar foydalanuvchi murojaat yuborayotgan bo'lsa
+    # 2. Agar murojaat kutish rejimi yoqilgan bo'lsa
     if context.user_data.get('waiting_for_complaint'):
-        # Adminga forward qilish
+        # Adminga forward qilish (xabarning o'zini)
         await context.bot.forward_message(chat_id=ADMIN_ID, from_chat_id=user.id, message_id=update.message.message_id)
         
-        # Adminga ID-ni matn ko'rinishida yuborish (Reply qilish oson bo'lishi uchun)
-        info_text = (
-            f"📩 YANGI MUROJAAT\n"
-            f"👤 Ism: {user.full_name}\n"
-            f"🆔 ID: `{user.id}`\n"
-            f"🔗 Username: @{user.username if user.username else 'yoq'}\n\n"
-            f"Javob berish uchun BU XABARGA 'reply' qilib yozing."
-        )
+        # Adminga javob berish uchun ID-ni yuborish
+        info_text = f"📩 YANGI MUROJAAT\n👤 Ism: {user.full_name}\n🆔 ID: `{user.id}`\n\nJavob berish uchun BU XABARGA 'reply' qiling."
         await context.bot.send_message(chat_id=ADMIN_ID, text=info_text, parse_mode='Markdown')
         
-        await update.message.reply_text("Rahmat! Murojaatingiz adminga yetkazildi.")
+        await update.message.reply_text("Murojaatingiz adminga yetkazildi. Rahmat!")
+        # Murojaat qabul qilingach, kutish rejimini o'chiramiz
         context.user_data['waiting_for_complaint'] = False
+        return
 
-async def reply_to_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Faqat admin reply qilganda ishlaydi
-    if update.effective_user.id == ADMIN_ID and update.message.reply_to_message:
-        try:
-            # Reply qilingan xabar matnidan ID ni qidirish
-            reply_msg_text = update.message.reply_to_message.text
-            
-            # Matndan ID raqamini ajratib olish mantiqi
-            if "🆔 ID:" in reply_msg_text:
-                target_user_id = int(reply_msg_text.split("🆔 ID:")[1].split("\n")[0].strip())
-                
-                # /reply so'zini olib tashlab, faqat javobni qoldirish
-                admin_answer = update.message.text
-                if admin_answer.startswith('/reply'):
-                    admin_answer = admin_answer.replace('/reply', '').strip()
-
-                if admin_answer:
-                    await context.bot.send_message(chat_id=target_user_id, text=f"Admin javobi:\n\n{admin_answer}")
-                    await update.message.reply_text("✅ Javob yuborildi.")
-                else:
-                    await update.message.reply_text("⚠️ Xato: Javob matnini yozing (Masalan: /reply Salom).")
-            else:
-                await update.message.reply_text("❌ Bu xabarga javob berib bo'lmaydi. Faqat ID yozilgan xabarga reply qiling.")
-        
-        except Exception as e:
-            logging.error(f"Reply error: {e}")
-            await update.message.reply_text("❌ Xato: Foydalanuvchi ID-sini aniqlab bo'lmadi.")
+    # 3. Agar foydalanuvchi shunchaki nimanidir yozsa (tugmani bosmasdan)
+    if not context.user_data.get('waiting_for_complaint'):
+        await update.message.reply_text("Iltimos, avval '📝 Murojaat yozish' tugmasini bosing.")
 
 async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     contact = update.message.contact
-    # Adminga kontaktni yuborish
     await context.bot.send_message(
         chat_id=ADMIN_ID,
-        text=f"📞 KONTAKT KELDI:\n👤 Ism: {contact.first_name}\n☎️ Tel: +{contact.phone_number}\n🆔 ID: `{contact.user_id}`",
+        text=f"📞 KONTAKT:\nIsm: {contact.first_name}\nTel: +{contact.phone_number}\nID: `{contact.user_id}`",
         parse_mode='Markdown'
     )
-    await update.message.reply_text("Kontaktingiz qabul qilindi!", reply_markup=ReplyKeyboardRemove())
+    await update.message.reply_text("Kontaktingiz qabul qilindi!")
+
+async def reply_to_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id == ADMIN_ID and update.message.reply_to_message:
+        try:
+            reply_msg = update.message.reply_to_message.text
+            if "🆔 ID:" in reply_msg:
+                user_id = int(reply_msg.split("🆔 ID:")[1].split("\n")[0].strip())
+                answer = update.message.text.replace("/reply", "").strip()
+                
+                if answer:
+                    await context.bot.send_message(chat_id=user_id, text=f"Admin javobi:\n\n{answer}")
+                    await update.message.reply_text("✅ Javob yuborildi.")
+                else:
+                    await update.message.reply_text("⚠️ Javob matnini yozing.")
+            else:
+                await update.message.reply_text("❌ ID topilmadi. Ma'lumot xabariga reply qiling.")
+        except Exception as e:
+            await update.message.reply_text(f"❌ Xato: {e}")
 
 # --- FLASK SERVER ---
 app_server = Flask(__name__)
 @app_server.route('/')
-def home(): return "Bot online!"
+def home(): return "Bot Ishlamoqda!"
 
-def run_web(): app_server.run(host='0.0.0.0', port=10000)
+def run_web():
+    app_server.run(host='0.0.0.0', port=10000)
 
 # --- ASOSIY QISM ---
 if __name__ == '__main__':
@@ -102,11 +94,9 @@ if __name__ == '__main__':
     
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("reply", reply_to_user))
-    # Kontakt kelganda handle_contact ishlaydi
     app.add_handler(MessageHandler(filters.CONTACT, handle_contact))
-    # Boshqa xabarlar uchun handle_message
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    # Rasm yoki videolar kelsa ham handle_message ishlashi uchun
-    app.add_handler(MessageHandler(filters.PHOTO | filters.VIDEO | filters.VOICE, handle_message))
+    
+    # Bu handler rasm, video va matnlarni barchasini handle_all_messages ga yuboradi
+    app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND, handle_all_messages))
     
     app.run_polling()
