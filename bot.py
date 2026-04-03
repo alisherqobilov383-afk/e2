@@ -32,7 +32,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[KeyboardButton("📝 Murojaat yozish")]]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text(
-        "Assalomu alaykum! Murojaat qoldirish uchun tugmani bosing:",
+        """Assalomu alaykum, bu Eltuz portalining murojaat boti.
+Ariza va shikoyatingiz yoki fosh etuvchi ma’lumotingiz bo‘lsa, mazmunini qisqacha tushuntirib yozing. Hujjatlar, foto, audio va videolar bo‘lsa ilova qilib yo‘llang. Aloqa uchun telegram manzilingiz yoki telefon raqamingizni yozib yuboring.
+""",
         reply_markup=reply_markup
     )
 
@@ -63,13 +65,12 @@ async def user_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     user = update.effective_user
     text = update.message.text
 
-    if text == "📝 Murojaat yozish":
+    if text == "📝 Boshlash":
         context.user_data['chat_active'] = True
         context.user_data['contact_asked'] = False
         contact_btn = [[KeyboardButton("📱 Kontaktni ulashish", request_contact=True)]]
         markup = ReplyKeyboardMarkup(contact_btn, resize_keyboard=True)
-        await update.message.reply_text("""Assalomu alaykum, bu Eltuz portalining murojaat boti.
-        Ariza va shikoyatingiz yoki fosh etuvchi ma’lumotingiz bo‘lsa, mazmunini qisqacha tushuntirib yozing. Hujjatlar, foto, audio va videolar bo‘lsa ilova qilib yo‘llang. Aloqa uchun telegram manzilingiz yoki telefon raqamingizni yozib yuboring.""", reply_markup=markup)
+        await update.message.reply_text(""Ariza va shikoyatingiz yoki fosh etuvchi ma’lumotlaringizni yuborishingiz mumkin. Aloqa uchun telegram manzilingiz yoki telefon raqamingizni qoldirishni unutmang!!!"", reply_markup=markup)
         return
 
     if context.user_data.get('chat_active'):
@@ -82,7 +83,7 @@ async def user_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         
         # Foydalanuvchiga javob berish
         if not context.user_data.get('contact_asked'):
-            await update.message.reply_text("Murojaatingiz yuborildi. Admin bog'lanishi uchun kontaktingizni qoldiring.")
+            await update.message.reply_text("Murojaatingiz qabul qilindi va adminga yuborildi.")
             context.user_data['contact_asked'] = True
         else:
             await update.message.reply_text("Xabaringiz qabul qilindi.")
