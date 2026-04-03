@@ -68,7 +68,8 @@ async def user_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         context.user_data['contact_asked'] = False
         contact_btn = [[KeyboardButton("📱 Kontaktni ulashish", request_contact=True)]]
         markup = ReplyKeyboardMarkup(contact_btn, resize_keyboard=True)
-        await update.message.reply_text("Iltimos murojaatingizni batafsil yozing:", reply_markup=markup)
+        await update.message.reply_text("Assalomu alaykum, bu Eltuz portalining murojaat boti.
+        Ariza va shikoyatingiz yoki fosh etuvchi ma’lumotingiz bo‘lsa, mazmunini qisqacha tushuntirib yozing. Hujjatlar, foto, audio va videolar bo‘lsa ilova qilib yo‘llang. Aloqa uchun telegram manzilingiz yoki telefon raqamingizni yozib yuboring.", reply_markup=markup)
         return
 
     if context.user_data.get('chat_active'):
