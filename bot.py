@@ -1,14 +1,6 @@
-import logging
-import threading
-import re
-import os  # Portni olish uchun kerak
-from flask import Flask
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
-
 # --- SOZLAMALAR ---
 TOKEN = "8524179314:AAG6qq-9DlczUHDRQkpyL2ZuV925wzyaMmw"
-ADMIN_ID = 6123752979   # O'zingizning ID raqamingiz
+ADMIN_ID = 6123752979    # O'zingizning ID raqamingiz
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
@@ -20,7 +12,6 @@ def home():
     return "Bot is running..."
 
 def run_web():
-    # Render bergan portni oladi, bo'lmasa 10000 ni ishlatadi
     port = int(os.environ.get("PORT", 10000))
     app_server.run(host='0.0.0.0', port=port)
 
@@ -29,12 +20,13 @@ def run_web():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['chat_active'] = False
     context.user_data['contact_asked'] = False
+    # Tugma nomini aniq belgilaymiz
     keyboard = [[KeyboardButton("📝 Murojaat yozish")]]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+    
     await update.message.reply_text(
         """Assalomu alaykum, bu Eltuz portalining murojaat boti.
-Ariza va shikoyatingiz yoki fosh etuvchi ma’lumotingiz bo‘lsa, mazmunini qisqacha tushuntirib yozing. Hujjatlar, foto, audio va videolar bo‘lsa ilova qilib yo‘llang. Aloqa uchun telegram manzilingiz yoki telefon raqamingizni yozib yuboring.
-""",
+Ariza va shikoyatingiz yoki fosh etuvchi ma’lumotingiz bo‘lsa, mazmunini qisqacha tushuntirib yozing. Hujjatlar, foto, audio va videolar bo‘lsa ilova qilib yo‘llang. Aloqa uchun telegram manzilingiz yoki telefon raqamingizni yozib yuboring.""",
         reply_markup=reply_markup
     )
 
@@ -45,7 +37,6 @@ async def admin_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     target_id = None
     reply_msg = update.message.reply_to_message
 
-    # ID ni matndan qidirish
     if reply_msg.text:
         match = re.search(r"ID:\s*(\d+)", reply_msg.text)
         if match:
@@ -65,23 +56,28 @@ async def user_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     user = update.effective_user
     text = update.message.text
 
-    if text == "📝 Boshlash":
+    # Tugma nomini yuqoridagi bilan bir xil qildik
+    if text == "📝 Murojaat yozish":
         context.user_data['chat_active'] = True
         context.user_data['contact_asked'] = False
         contact_btn = [[KeyboardButton("📱 Kontaktni ulashish", request_contact=True)]]
         markup = ReplyKeyboardMarkup(contact_btn, resize_keyboard=True)
-        await update.message.reply_text("Ariza va shikoyatingiz yoki fosh etuvchi ma’lumotlaringizni yuborishingiz mumkin. Aloqa uchun telegram manzilingiz yoki telefon raqamingizni qoldirishni unutmang!!!", reply_markup=markup)
+        await update.message.reply_text(
+            "Ariza va shikoyatingiz yoki fosh etuvchi ma’lumotlaringizni yuborishingiz mumkin. "
+            "Aloqa uchun telegram manzilingiz yoki telefon raqamingizni qoldirishni unutmang!!!", 
+            reply_markup=markup
+        )
         return
 
     if context.user_data.get('chat_active'):
-        # Adminga yuborish
+        # Adminga forward qilish
         await context.bot.forward_message(chat_id=ADMIN_ID, from_chat_id=user.id, message_id=update.message.message_id)
+        
         await context.bot.send_message(
             chat_id=ADMIN_ID,
             text=f"📩 Yangi xabar!\n👤 {user.full_name}\n🆔 ID: {user.id}\n\n👆 Javob berish uchun 'Reply' qiling."
         )
         
-        # Foydalanuvchiga javob berish
         if not context.user_data.get('contact_asked'):
             await update.message.reply_text("Murojaatingiz qabul qilindi va adminga yuborildi.")
             context.user_data['contact_asked'] = True
@@ -98,16 +94,13 @@ async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- ASOSIY QISM ---
 if __name__ == '__main__':
-    # Serverni alohida oqimda ishga tushirish
     threading.Thread(target=run_web, daemon=True).start()
     
-    # Botni ishga tushirish
     app = ApplicationBuilder().token(TOKEN).build()
     
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.REPLY & filters.User(user_id=ADMIN_ID), admin_reply_handler))
     app.add_handler(MessageHandler(filters.CONTACT, handle_contact))
-    # Admin bo'lmagan foydalanuvchilarning barcha xabarlarini ushlash
     app.add_handler(MessageHandler(filters.ALL & ~filters.COMMAND & ~filters.User(user_id=ADMIN_ID), user_message_handler))
     
     print("Bot va Server ishga tushdi...")
