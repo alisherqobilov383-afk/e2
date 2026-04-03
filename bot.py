@@ -70,7 +70,7 @@ async def user_message_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         context.user_data['contact_asked'] = False
         contact_btn = [[KeyboardButton("📱 Kontaktni ulashish", request_contact=True)]]
         markup = ReplyKeyboardMarkup(contact_btn, resize_keyboard=True)
-        await update.message.reply_text(""Ariza va shikoyatingiz yoki fosh etuvchi ma’lumotlaringizni yuborishingiz mumkin. Aloqa uchun telegram manzilingiz yoki telefon raqamingizni qoldirishni unutmang!!!"", reply_markup=markup)
+        await update.message.reply_text("Ariza va shikoyatingiz yoki fosh etuvchi ma’lumotlaringizni yuborishingiz mumkin. Aloqa uchun telegram manzilingiz yoki telefon raqamingizni qoldirishni unutmang!!!", reply_markup=markup)
         return
 
     if context.user_data.get('chat_active'):
